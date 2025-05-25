@@ -8,6 +8,8 @@
     <a href='' target='_blank'>Qingtian Zhu</a><sup>1</sup> &nbsp; 
     <a href='' target='_blank'>Mingze Ma</a><sup>1</sup> &nbsp;
     <a href='' target='_blank'>Jiancheng Zhao</a><sup>1</sup> &nbsp; 
+<div>
+<div>
     <a href='' target='_blank'>Yanhong Zeng</a><sup>2</sup> &nbsp; 
     <a href='' target='_blank'>Zhihang Zhong</a><sup>2</sup> &nbsp; 
     <a href='' target='_blank'>Xiao Sun</a><sup>2</sup> &nbsp; 
@@ -27,7 +29,9 @@
 
 
 
+----
 
-Click 'watch' instead of 'star' to get the notification when we update and release the code and model.
 
-We will release codes and model by 2025.07.01.
+Click 'watch' instead of 'star' to get the notifications when we update and release the code and model.
+
+We will release code and model by 2025.07.01.
