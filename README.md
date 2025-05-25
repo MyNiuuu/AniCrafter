@@ -4,7 +4,7 @@
 <div>
     <a href='https://myniuuu.github.io/' target='_blank'>Muyao Niu</a> <sup>1,2</sup> &nbsp;
     <a href='' target='_blank'>Mingdeng Cao</a><sup>1</sup> &nbsp;
-    <a href='' target='_blank'>Yinfan Zhan</a><sup>1</sup> &nbsp;
+    <a href='' target='_blank'>Yifan Zhan</a><sup>1</sup> &nbsp;
     <a href='' target='_blank'>Qingtian Zhu</a><sup>1</sup> &nbsp; 
     <a href='' target='_blank'>Mingze Ma</a><sup>1</sup> &nbsp;
     <a href='' target='_blank'>Jiancheng Zhao</a><sup>1</sup> &nbsp; 
