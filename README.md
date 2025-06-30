@@ -43,8 +43,8 @@ We leverage "3DGS Avatar + Background Video" as guidance for the video diffusion
 ## 📰 CODE RELEASE
 
 - [x] (2024.07.01) Release model checkpoint and cross-character inference script.
-- [] Release inference script for self-reenactment.
-- [] Release training codes.
+- [ ] Release inference script for self-reenactment.
+- [ ] Release training codes.
 
 
 ## ⚙️ Environment Setup
