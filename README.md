@@ -21,6 +21,9 @@
 
 
 
+<a href='https://arxiv.org/abs/2505.20255'><img src='https://img.shields.io/badge/ArXiv-PDF-red'></a> &nbsp; <a href='https://huggingface.co/MyNiuuu/Anicrafter_release'><img src='https://img.shields.io/badge/🤗 HuggingFace-AniCrafter-yellow'></a>
+
+
 ## TL;DR
 
 We leverage "3DGS Avatar + Background Video" as guidance for the video diffusion model to insert and animate anyone into any scene following given motion sequence.
