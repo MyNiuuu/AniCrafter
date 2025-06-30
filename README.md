@@ -26,7 +26,7 @@
 
 ## TL;DR
 
-We leverage "3DGS Avatar + Background Video" as guidance for the video diffusion model to insert and animate anyone into any scene following given motion sequence.
+> We leverage **"3DGS Avatar + Background Video"** as guidance for the video diffusion model to **insert and animate anyone into any scene following given motion sequence**.
 
 <div align="center">
   <h3>
