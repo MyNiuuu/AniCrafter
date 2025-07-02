@@ -21,7 +21,7 @@
 
 
 
-<a href='https://arxiv.org/abs/2505.20255'><img src='https://img.shields.io/badge/ArXiv-PDF-red'></a> &nbsp; <a href='https://huggingface.co/MyNiuuu/Anicrafter_release'><img src='https://img.shields.io/badge/🤗 HuggingFace-AniCrafter-yellow'></a>
+<a href='https://arxiv.org/abs/2505.20255'><img src='https://img.shields.io/badge/ArXiv-PDF-red'></a> &nbsp; <a href='https://myniuuu.github.io/AniCrafter'><img src='https://img.shields.io/badge/Project-Page-Green'></a> &nbsp; <a href='https://huggingface.co/MyNiuuu/Anicrafter_release'><img src='https://img.shields.io/badge/🤗 HuggingFace-AniCrafter-yellow'></a>
 
 
 ## TL;DR
@@ -38,6 +38,7 @@
 
 ## 🔥🔥🔥 New Features/Updates
 
+- (2025.07.02) Our [Project Page](https://myniuuu.github.io/AniCrafter) 🏠 is online!
 - (2025.07.01) We have released the model and inference script for cross-character inference! 
 - If you find this work interesting, please do not hesitate to give a ⭐!
 
