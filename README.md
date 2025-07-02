@@ -47,6 +47,7 @@
 ## 📰 CODE RELEASE
 
 - [x] (2024.07.01) Release model checkpoint and cross-character inference script.
+- [ ] Release the complete cross-character inference script including data preprocessing (mask parsing + SMPLX estimation + background inpainting).
 - [ ] Release inference script for self-reenactment.
 - [ ] Release training codes.
 
