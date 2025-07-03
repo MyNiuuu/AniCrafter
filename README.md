@@ -38,8 +38,9 @@
 
 ## 🔥🔥🔥 New Features/Updates
 
+- (2024.07.03) We have released the cross-character inference script to replace the person in the source video!
 - (2025.07.02) Our [Project Page](https://myniuuu.github.io/AniCrafter) 🏠 is online!
-- (2025.07.01) We have released the model and inference script for cross-character inference! 
+- (2025.07.01) We have released the model and inference script to insert and animate the character into the background video following SMPLX motion sequences! 
 - If you find this work interesting, please do not hesitate to give a ⭐!
 
 
@@ -47,8 +48,7 @@
 ## 📰 CODE RELEASE
 
 - [x] (2024.07.01) Release model checkpoint and cross-character inference script.
-- [ ] Release the complete cross-character inference script including data preprocessing (mask parsing + SMPLX estimation + background inpainting).
-- [ ] Release inference script for self-reenactment.
+- [x] (2024.07.03) Release the complete cross-character inference script including data preprocessing (mask parsing + SMPLX estimation + background inpainting).
 - [ ] Release training codes.
 
 
@@ -73,9 +73,9 @@ mv ./Anicrafter_release/pretrained_models ./pretrained_models
 ```
 
 
-## 🏃 Cross-Character Inference 
+## 🏃 Cross-Character Inference from Background Video and Motions
 
-Run the following command to run the animation pipeline, which consists of following key functions:
+Run the following commands to insert and animate the character into the background video following SMPLX motion sequences. The pipeline consists of following key functions:
 - Reconstructing 3DGS Avatar from single image using [LHM](https://github.com/aigc3d/LHM)
 - Animating the 3DGS Avatar according to the SMPLX sequences to obtain the spatial aligned avatar renderings
 - Combine avatar rendering and background video to form the "Avatar + Background" condition
@@ -86,10 +86,62 @@ python run_pipeline.py \
 --ckpt_path ./pretrained_models/anicrafter \
 --wan_base_ckpt_path ./Wan2.1-I2V-14B-720P \
 --character_image_path ./demo/character_images/000000.jpg \
---scene_path ./demo/videos/scene_000001 \
+--scene_path ./demo/videos/scene_000000 \
 --save_root ./infer_result
 ```
 
+
+
+## 🏃 Cross-Character Inference from in-the-wild Videos 
+Run the following commands to replace the person in the source video with our complete data preprocessing pipeline, which contains the following components:
+
+- Parsing human masks
+- Estimating SMPLX parameters and rendering SMPLX mesh videos
+- Background inpainting based on the human masks
+- Reconstructing 3DGS Avatar from single image using [LHM](https://github.com/aigc3d/LHM)
+- Animating the 3DGS Avatar according to the SMPLX sequences to obtain the spatial aligned avatar renderings
+- Combine avatar rendering and background video to form the "Avatar + Background" condition
+- Run the diffusion model to obtain the final animation results 
+
+
+### ⚙️ Additional Environment Setup
+
+```
+
+cd engine/pose_estimation
+pip install mmcv==1.3.9
+pip install -v -e third-party/ViTPose
+pip install ultralytics
+pip install av
+cd ../..
+pip install numpy==1.23.5
+
+
+mkdir weights
+cd weights
+wget https://github.com/sczhou/ProPainter/releases/download/v0.1.0/cutie-base-mega.pth
+wget https://github.com/sczhou/ProPainter/releases/download/v0.1.0/i3d_rgb_imagenet.pt
+wget https://github.com/sczhou/ProPainter/releases/download/v0.1.0/ProPainter.pth
+wget https://github.com/sczhou/ProPainter/releases/download/v0.1.0/raft-things.pth
+wget https://github.com/sczhou/ProPainter/releases/download/v0.1.0/recurrent_flow_completion.pth
+cd ..
+
+# or you can mannually download from https://github.com/sczhou/ProPainter/releases/tag/v0.1.0
+```
+
+### 💻 Start Inference
+
+```
+# Mask + SMPLX + Inpainting + Avatar Recon + Rendering + Diffusion
+# You could change the hyper-parameters of the inpainting algorithm to obtain optimal results
+
+python run_pipeline_with_preprocess.py \
+--video_root ./demo/origin_videos/raw_video \
+--ckpt_path ./pretrained_models/anicrafter \
+--wan_base_ckpt_path ./Wan2.1-I2V-14B-720P \
+--character_image_path ./demo/character_images/000000.jpg \
+--save_root ./infer_result_replace
+```
 
 
 ## Citation

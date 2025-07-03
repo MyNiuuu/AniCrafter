@@ -12,4 +12,8 @@ pip install git+https://github.com/camenduru/simple-knn/
 
 pip install facexlib roma smplx kornia accelerate diffusers==0.32.0 tensorboard plyfile trimesh jaxtyping decord chumpy gfpgan modelscope timm transformers==4.46.2 onnxruntime-gpu sentencepiece ftfy huggingface_hub[cli] imageio==2.37.0 imageio-ffmpeg==0.6.0
 
+
 pip install numpy==1.23.5
+
+
+

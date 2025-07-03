@@ -24,6 +24,7 @@ from PIL import Image
 
 import cv2
 import numpy as np
+import imageio
 import torch
 import torch.nn.functional as F
 from blocks import SMPL_Layer
@@ -158,21 +159,59 @@ def get_bbox(mask):
 
 
 
+
+def video_to_pil_images(video_path, height=None, width=None):
+    if video_path.endswith('.mp4'):
+        cap = cv2.VideoCapture(video_path)
+        pil_images = []
+        while True:
+            ret, frame = cap.read()  # 读取一帧
+            if not ret:
+                break  # 视频结束或读取失败
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(frame_rgb)
+            if height is not None and width is not None:
+                pil_image = pil_image.resize((width, height), Image.Resampling.LANCZOS)
+            pil_images.append(pil_image)
+        cap.release()
+    elif os.path.isdir(video_path):
+        frame_files = sorted([os.path.join(video_path, x) for x in os.listdir(video_path) if x.endswith('.jpg') or x.endswith('.png') or x.endswith('.jpeg')])
+        pil_images = []
+        for frame in frame_files:
+            frame = cv2.imread(frame)
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(frame_rgb)
+            if height is not None and width is not None:
+                pil_image = pil_image.resize((width, height), Image.Resampling.LANCZOS)
+            pil_images.append(pil_image)
+    else:
+        raise ValueError("Unsupported video format. Please provide a .mp4 file or a directory of images.")
+    return pil_images
+
+
+
+
 def load_video(video_path, pad_ratio):
     fps = 30
-    all_images = sorted(os.listdir(video_path))
+    all_images = video_to_pil_images(video_path)
 
+    try:
+        all_masks = video_to_pil_images(video_path.replace('raw_video', 'mask_video'))
+    except:
+        print('error in reading masks, using frames only')
+        use_mask = False
+    else:
+        use_mask = True
+        
     frames = []
-    for img in all_images:
-        frame = cv2.imread(os.path.join(video_path, img))
-        try:
-            mask = cv2.imread(os.path.join(video_path.replace('images', 'masks'), img.replace('.jpg', '.png'))) / 255.
+    for idx, img in enumerate(all_images):
+        frame = cv2.cvtColor(np.array(all_images[idx]), cv2.COLOR_BGR2RGB)
+        if use_mask:
+            mask = np.array(all_masks[idx]) / 255.
             bbox = get_bbox(mask[:, :, 0])
             bbox_list = bbox.get_box()
             mask[bbox_list[1] : bbox_list[3], bbox_list[0] : bbox_list[2]] = 1
             frame = np.uint8(frame * mask)
-        except:
-            print(f"error in reading {os.path.join(video_path.replace('images', 'masks'), img.replace('.jpg', '.png'))}")
         # since the tracker and detector receive BGR images as inputs
         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         if pad_ratio > 0:
@@ -419,7 +458,7 @@ class Video2MotionPipeline:
         )
         self.smplx_model.to(self.device)
         self.smplify = TemporalSMPLify(
-            smpl=self.smplx_model, device=self.device, num_steps=1000
+            smpl=self.smplx_model, device=self.device, num_steps=50
         )
 
     def track(self, all_frames):
@@ -613,7 +652,7 @@ class Video2MotionPipeline:
             with open(os.path.join(out_path, f"{(i+1):05}.json"), "w") as fp:
                 json.dump(smplx_param, fp)
 
-    def __call__(self, video_path, output_path):
+    def __call__(self, video_path, output_path, smplx_mesh_output_path):
         start = time.time()
         all_frames, raw_H, raw_W, fps, offset_w, offset_h, fname_list = load_video(
             video_path, pad_ratio=self.pad_ratio
@@ -642,16 +681,13 @@ class Video2MotionPipeline:
         output_folder = output_path
         os.makedirs(output_folder, exist_ok=True)
 
-        smplx_mesh_output_folder = os.path.join(os.path.dirname(output_folder), "smplx_mesh")
-        os.makedirs(smplx_mesh_output_folder, exist_ok=True)
-
         all_SMPLX_mesh_frames = self.render_SMPLX_frame(all_frames, verts, raw_K)
 
         # print(all_SMPLX_mesh_frames.shape)
 
-        for idx, fname in enumerate(fname_list):
-            smplx_mesh_save_path = os.path.join(smplx_mesh_output_folder, fname)
-            Image.fromarray(all_SMPLX_mesh_frames[idx]).save(smplx_mesh_save_path)
+        smplx_mesh_pils = [Image.fromarray(x) for x in all_SMPLX_mesh_frames]
+
+        save_video(smplx_mesh_pils, smplx_mesh_output_path, fps=15, quality=7)
 
         if self.visualize:
             self.save_video(
@@ -666,6 +702,15 @@ class Video2MotionPipeline:
         duration = time.time() - start
         print(f"{video_path} processing completed, duration: {duration:.2f}s")
 
+
+
+
+def save_video(pils, save_path, fps, quality=9, ffmpeg_params=None):
+    writer = imageio.get_writer(save_path, fps=fps, quality=quality, ffmpeg_params=ffmpeg_params)
+    for pil in pils:
+        frame = np.array(pil)
+        writer.append_data(frame)
+    writer.close()
 
 
 IMG_EXTENSIONS = [
@@ -700,8 +745,8 @@ def make_dataset(dir, target_camera_list):
 def get_parse():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--root", type=str, required=True)
-    parser.add_argument("--data_idx", type=int, required=True)
-    parser.add_argument("--total_idx", type=int, required=True)
+    parser.add_argument("--save_root", type=str, required=True)
+    parser.add_argument("--save_mesh_root", type=str, required=True)
     parser.add_argument(
         "--model_path",
         type=str,
@@ -749,11 +794,6 @@ if __name__ == "__main__":
     scenes = [os.path.join(opt.root, x) for x in os.listdir(opt.root)]
     scenes.sort()
 
-    scenes = scenes[
-        opt.data_idx :: opt.total_idx
-    ]
-    print(f'Using data index {opt.data_idx} out of total index {opt.total_idx}!', len(scenes))
-
     # not_yet_scene = []
     # already_scene = []
     # for scene in scenes:
@@ -771,13 +811,13 @@ if __name__ == "__main__":
     #     scenes = not_yet_scene
     # print(f'Minus already scene lead to scene number:', len(scenes))
 
-    for scene in scenes:
+    for video_path in scenes:
 
-        # if '001168' not in scene:
-        #     continue
+        # video_path = os.path.join(scene, 'images')
+        output_path = os.path.splitext(video_path.replace(opt.root, opt.save_root))[0]
+        smplx_mesh_output_path = video_path.replace(opt.root, opt.save_mesh_root)
 
-        video_path = os.path.join(scene, 'images')
-        output_path = video_path.replace('images', 'smplx_crop_nopad_iter1000')
+        print(f"Processing video: {video_path} -> {output_path}")
 
         # save_viz_video_path = os.path.join(video_path.replace('images', 'smplx'), 'pose_visualized.mp4')
 
@@ -787,9 +827,7 @@ if __name__ == "__main__":
         #         continue
 
         os.makedirs(output_path, exist_ok=True)
-        try:
-            pipeline(video_path, output_path)
-        except Exception as e:
-            print(f'Error estimating SMPLX for {video_path}: {e}')
+        os.makedirs(os.path.dirname(smplx_mesh_output_path), exist_ok=True)
+        pipeline(video_path, output_path, smplx_mesh_output_path)
 
-        assert False
+        # assert False
