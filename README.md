@@ -28,11 +28,59 @@
 
 > We leverage **"3DGS Avatar + Background Video"** as guidance for the video diffusion model to **insert and animate anyone into any scene following given motion sequence**.
 
-<div align="center">
+<!-- <div align="center">
   <h3>
     <img src="assets/teaser_small.jpg"/>
   </h3>
-</div>
+</div> -->
+
+
+
+
+<table align="center">
+  <tr>
+    <td align="center" width="13%">
+      <img src="assets/character_image/000000.jpg"/>
+      <br />
+    </td>
+    <td align="center" width="29%">
+      <img src="assets/demo_videos/0.gif"/>
+      <br />
+    </td>
+    <td align="center" width="29%">
+      <img src="assets/demo_videos/1.gif"/>
+      <br />
+    </td>
+    <td align="center" width="29%">
+      <img src="assets/demo_videos/2.gif"/>
+      <br />
+    </td>
+  </tr>
+</table>
+
+
+
+<table align="center">
+  <tr>
+    <td align="center" width="13%">
+      <img src="assets/character_image/000001.jpg"/>
+      <br />
+    </td>
+    <td align="center" width="29%">
+      <img src="assets/demo_videos/3.gif"/>
+      <br />
+    </td>
+    <td align="center" width="29%">
+      <img src="assets/demo_videos/4.gif"/>
+      <br />
+    </td>
+    <td align="center" width="29%">
+      <img src="assets/demo_videos/5.gif"/>
+      <br />
+    </td>
+  </tr>
+</table>
+
 
 
 
