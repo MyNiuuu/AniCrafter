@@ -24,20 +24,27 @@
 <a href='https://arxiv.org/abs/2505.20255'><img src='https://img.shields.io/badge/ArXiv-PDF-red'></a> &nbsp; <a href='https://myniuuu.github.io/AniCrafter'><img src='https://img.shields.io/badge/Project-Page-Green'></a> &nbsp; <a href='https://huggingface.co/MyNiuuu/Anicrafter_release'><img src='https://img.shields.io/badge/🤗 HuggingFace-AniCrafter-yellow'></a>
 
 
+
+<div align="center">
+  <h3>
+    <img src="assets/caixukun_1080p.gif"/>
+  </h3>
+</div>
+
+
+
 ## TL;DR
 
 > We leverage **"3DGS Avatar + Background Video"** as guidance for the video diffusion model to **insert and animate anyone into any scene following given motion sequence**.
 
-<!-- <div align="center">
+<div align="center">
   <h3>
     <img src="assets/teaser_small.jpg"/>
   </h3>
-</div> -->
+</div>
 
 
-
-
-<table align="center">
+<!-- <table align="center">
   <tr>
     <td align="center" width="13%">
       <img src="assets/character_image/000000.jpg"/>
@@ -56,11 +63,11 @@
       <br />
     </td>
   </tr>
-</table>
+</table> -->
 
 
 
-<table align="center">
+<!-- <table align="center">
   <tr>
     <td align="center" width="13%">
       <img src="assets/character_image/000001.jpg"/>
@@ -79,7 +86,7 @@
       <br />
     </td>
   </tr>
-</table>
+</table> -->
 
 
 
