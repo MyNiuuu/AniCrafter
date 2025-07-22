@@ -93,6 +93,7 @@
 
 ## 🔥🔥🔥 New Features/Updates
 
+- (2024.07.22) We support Unified Sequence Parallel (USP) for multi-GPU inference.
 - (2024.07.03) We have released the cross-character inference script to replace the person in the source video!
 - (2025.07.02) Our [Project Page](https://myniuuu.github.io/AniCrafter) 🏠 is online!
 - (2025.07.01) We have released the model and inference script to insert and animate the character into the background video following SMPLX motion sequences! 
@@ -102,9 +103,10 @@
 
 ## 📰 CODE RELEASE
 
-- [x] (2024.07.22) We support Unified Sequence Parallel (USP) for multi-GPU inference.
+
 - [x] (2024.07.01) Release model checkpoint and cross-character inference script.
 - [x] (2024.07.03) Release the complete cross-character inference script including data preprocessing (mask parsing + SMPLX estimation + background inpainting).
+- [x] (2024.07.22) We support Unified Sequence Parallel (USP) for multi-GPU inference.
 - [ ] Release training codes.
 
 
