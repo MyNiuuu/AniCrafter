@@ -17,7 +17,7 @@ from torchvision.transforms import v2
 from graphics_utils import getWorld2View2, focal2fov, fov2focal, getProjectionMatrix_refine
 from lhm_runner import HumanLRMInferrer
 from LHM.models.rendering.smpl_x_voxel_dense_sampling import SMPLXVoxelMeshModel
-from diffsynth import ModelManager, WanMovieCrafterCombineVideoPipeline
+from diffsynth import ModelManager, WanAniCrafterCombineVideoPipeline
 
 
 def pad_image_to_aspect_ratio(image, target_width, target_height, background_color=(255, 255, 255)):
@@ -327,7 +327,7 @@ def prepare_models(wan_base_ckpt_path, lora_ckpt_path):
 
     # assert False
 
-    pipe = WanMovieCrafterCombineVideoPipeline.from_model_manager(
+    pipe = WanAniCrafterCombineVideoPipeline.from_model_manager(
         model_manager, torch_dtype=torch.bfloat16, device="cuda"
     )
     pipe.enable_vram_management()

@@ -1,3 +1,4 @@
+import types
 from ..models import ModelManager
 from ..models.wan_video_dit import WanModel
 from ..models.wan_video_text_encoder import WanTextEncoder
@@ -93,9 +94,17 @@ def model_fn_wan_video(
     clip_feature: Optional[torch.Tensor] = None,
     y: Optional[torch.Tensor] = None,
     tea_cache: TeaCache = None,
-    add_condition = None,
+    add_condition = None, 
+    use_unified_sequence_parallel: bool = False,
     **kwargs,
 ):
+    
+    if use_unified_sequence_parallel:
+        import torch.distributed as dist
+        from xfuser.core.distributed import (get_sequence_parallel_rank,
+                                            get_sequence_parallel_world_size,
+                                            get_sp_group)
+        
     # print()
     t = dit.time_embedding(sinusoidal_embedding_1d(dit.freq_dim, timestep))
     t_mod = dit.time_projection(t).unflatten(1, (6, dit.dim))
@@ -124,6 +133,11 @@ def model_fn_wan_video(
     else:
         tea_cache_update = False
     
+    # blocks
+    if use_unified_sequence_parallel:
+        if dist.is_initialized() and dist.get_world_size() > 1:
+            x = torch.chunk(x, get_sequence_parallel_world_size(), dim=1)[get_sequence_parallel_rank()]
+    
     if tea_cache_update:
         x = tea_cache.update(x)
     else:
@@ -134,12 +148,15 @@ def model_fn_wan_video(
             tea_cache.store(x)
 
     x = dit.head(x, t)
+    if use_unified_sequence_parallel:
+        if dist.is_initialized() and dist.get_world_size() > 1:
+            x = get_sp_group().all_gather(x, dim=1)
     x = dit.unpatchify(x, (f, h, w))
     return x
 
 
 
-class WanMovieCrafterCombineVideoPipeline(BasePipeline):
+class WanAniCrafterCombineVideoPipeline(BasePipeline):
 
     def __init__(self, device="cuda", torch_dtype=torch.float16, tokenizer_path=None):
         super().__init__(device=device, torch_dtype=torch_dtype)
@@ -152,6 +169,7 @@ class WanMovieCrafterCombineVideoPipeline(BasePipeline):
         self.model_names = ['text_encoder', 'dit', 'vae']
         self.height_division_factor = 16
         self.width_division_factor = 16
+        self.use_unified_sequence_parallel = False
 
 
     def enable_vram_management(self, num_persistent_param_in_dit=None):
@@ -311,19 +329,33 @@ class WanMovieCrafterCombineVideoPipeline(BasePipeline):
 
 
     @staticmethod
-    def from_model_manager(model_manager: ModelManager, torch_dtype=None, device=None):
+    def from_model_manager(model_manager: ModelManager, torch_dtype=None, device=None, use_usp=False):
         if device is None: device = model_manager.device
         if torch_dtype is None: torch_dtype = model_manager.torch_dtype
-        pipe = WanMovieCrafterCombineVideoPipeline(
+        pipe = WanAniCrafterCombineVideoPipeline(
             device=device, 
             torch_dtype=torch_dtype, 
         )
         pipe.fetch_models(model_manager)
+
+        if use_usp:
+            from xfuser.core.distributed import get_sequence_parallel_world_size
+            from ..distributed.xdit_context_parallel import usp_attn_forward, usp_dit_forward
+
+            for block in pipe.dit.blocks:
+                block.self_attn.forward = types.MethodType(usp_attn_forward, block.self_attn)
+            pipe.dit.forward = types.MethodType(usp_dit_forward, pipe.dit)
+            pipe.sp_size = get_sequence_parallel_world_size()
+            pipe.use_unified_sequence_parallel = True
+
         return pipe
     
     
     def denoising_model(self):
         return self.dit
+    
+    def prepare_unified_sequence_parallel(self):
+        return {"use_unified_sequence_parallel": self.use_unified_sequence_parallel}
 
 
     def encode_prompt(self, prompt, positive=True):
@@ -533,6 +565,9 @@ class WanMovieCrafterCombineVideoPipeline(BasePipeline):
         # Denoise
         self.load_models_to_device(["dit"])
 
+        # Unified Sequence Parallel
+        usp_kwargs = self.prepare_unified_sequence_parallel()
+
         # condition
         condition = blend_data + smplx_data
         condition = rearrange(condition, 'b c f h w -> b (f h w) c').contiguous()
@@ -542,10 +577,10 @@ class WanMovieCrafterCombineVideoPipeline(BasePipeline):
 
             # Inference
             model_input = latents
-            noise_pred_posi = model_fn_wan_video(self.dit, model_input, timestep=timestep, **prompt_emb_posi, **image_emb, **extra_input, **tea_cache_posi, add_condition = condition)
+            noise_pred_posi = model_fn_wan_video(self.dit, model_input, timestep=timestep, **prompt_emb_posi, **image_emb, **extra_input, **tea_cache_posi, **usp_kwargs, add_condition = condition)
             # noise_pred_posi = model_fn_wan_video(self.dit, latents, timestep=timestep, **prompt_emb_posi, **image_emb, **extra_input, **tea_cache_posi)
             if cfg_scale != 1.0:
-                noise_pred_nega = model_fn_wan_video(self.dit, latents, timestep=timestep, **prompt_emb_nega, **image_emb, **extra_input, **tea_cache_nega)
+                noise_pred_nega = model_fn_wan_video(self.dit, latents, timestep=timestep, **prompt_emb_nega, **image_emb, **extra_input, **tea_cache_nega, **usp_kwargs)
                 noise_pred = noise_pred_nega + cfg_scale * (noise_pred_posi - noise_pred_nega)
             else:
                 noise_pred = noise_pred_posi

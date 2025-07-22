@@ -12,7 +12,5 @@ from .pipeline_runner import SDVideoPipelineRunner
 from .hunyuan_video import HunyuanVideoPipeline
 from .step_video import StepVideoPipeline
 from .wan_video import WanVideoPipeline, WanUniAnimateVideoPipeline, WanRepalceAnyoneVideoPipeline, WanUniAnimateLongVideoPipeline
-from .wan_video_v2v import WanMovieCrafterVideoPipeline
-from .wan_video_v2v_zerozonv import WanMovieCrafterZeroConvVideoPipeline
-from .wan_video_v2v_combine import WanMovieCrafterCombineVideoPipeline
+from .wan_video_v2v_combine import WanAniCrafterCombineVideoPipeline
 KolorsImagePipeline = SDXLImagePipeline

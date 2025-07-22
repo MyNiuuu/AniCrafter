@@ -8,6 +8,7 @@ import json
 import math
 import cv2
 import argparse
+import torch.distributed as dist
 
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from pytorch3d.transforms import matrix_to_quaternion
@@ -103,7 +104,7 @@ def load_camera(pose):
     return c2w, intrinsic, image_height, image_width
 
 
-def video_to_pil_images(video_path, height, width):
+def video_to_pil_images(video_path, height, width, max_frames=81):
     if video_path.endswith('.mp4'):
         cap = cv2.VideoCapture(video_path)
         pil_images = []
@@ -125,7 +126,7 @@ def video_to_pil_images(video_path, height, width):
             pil_images.append(pil_image)
     else:
         raise ValueError("Unsupported video format. Please provide a .mp4 file or a directory of images.")
-    return pil_images
+    return pil_images[:max_frames] if len(pil_images) > max_frames else pil_images
 
 
 def animate_gs_model(
@@ -327,8 +328,12 @@ def prepare_models(wan_base_ckpt_path, lora_ckpt_path):
 
     # assert False
 
+    # pipe = WanAniCrafterCombineVideoPipeline.from_model_manager(
+    #     model_manager, torch_dtype=torch.bfloat16, device="cuda"
+    # )
     pipe = WanAniCrafterCombineVideoPipeline.from_model_manager(
-        model_manager, torch_dtype=torch.bfloat16, device="cuda"
+        model_manager, torch_dtype=torch.bfloat16, device=f"cuda:{dist.get_rank()}", 
+        use_usp=True if dist.get_world_size() > 1 else False
     )
     pipe.enable_vram_management()
 
@@ -348,9 +353,59 @@ if __name__ == '__main__':
     parser.add_argument("--ckpt_path", type=str, required=True)
     parser.add_argument("--wan_base_ckpt_path", type=str, required=True)
     parser.add_argument("--character_image_path", type=str, required=True)
-    parser.add_argument("--scene_path", type=str, required=True)
+    parser.add_argument("--video_root", type=str, default='./demo/origin_videos/raw_video')
     parser.add_argument("--save_root", type=str, required=True)
     args = parser.parse_args()
+
+
+    dist.init_process_group(
+        backend="nccl",
+        init_method="env://",
+    )
+    from xfuser.core.distributed import (initialize_model_parallel,
+                                        init_distributed_environment)
+    init_distributed_environment(
+        rank=dist.get_rank(), world_size=dist.get_world_size())
+
+    initialize_model_parallel(
+        sequence_parallel_degree=dist.get_world_size(),
+        ring_degree=1,
+        ulysses_degree=dist.get_world_size(),
+    )
+    torch.cuda.set_device(dist.get_rank())
+
+
+    WILD_VIDEO_ROOT = args.video_root
+
+    if dist.get_rank() == 0:
+
+        # Step 1: Parsing human masks
+        video_root = WILD_VIDEO_ROOT
+        save_root = WILD_VIDEO_ROOT.replace('raw_video', 'mask_video')
+        rcode = os.system(f'python parse_video.py --video_root {video_root} --save_root {save_root}')
+        assert rcode == 0
+
+        # Step 2: Estimating SMPLX parameters and rendering SMPLX mesh video
+        root = WILD_VIDEO_ROOT
+        save_root = WILD_VIDEO_ROOT.replace('raw_video', 'smplx_param')
+        save_mesh_root = WILD_VIDEO_ROOT.replace('raw_video', 'smplx_video')
+        rcode = os.system(f'python engine/pose_estimation/video2motion.py --root {root} --save_root {save_root} --save_mesh_root {save_mesh_root} --visualize')
+        assert rcode == 0
+
+        # Step 3: Background inpainting
+        data_root = WILD_VIDEO_ROOT
+        save_root = WILD_VIDEO_ROOT.replace('raw_video', 'propainter_video')
+        mask_dilation = 16
+        ref_stride = 2
+        neighbor_length = 3
+        resize_ratio = 0.5
+        rcode = os.system(f'python ProPainter/inference_propainter.py --mask_dilation {mask_dilation} --ref_stride {ref_stride} --neighbor_length {neighbor_length} --resize_ratio {resize_ratio} --data_root {data_root} --save_root {save_root} ')
+        assert rcode == 0
+
+
+    # Here we select one video to process; you can modify this part to use a for loop to process all videos in args.video_root.
+    # We use this logic because the preprocessing Python files above were written to support processing all videos in the directory while loading the models only once, and we do not want to change this logic as it may be used for batch processing.
+    scene_path = os.path.join(WILD_VIDEO_ROOT, os.listdir(WILD_VIDEO_ROOT)[0])
 
     H, W = 720, 1280
     H, W = math.ceil(H / 16) * 16, math.ceil(W / 16) * 16
@@ -360,17 +415,15 @@ if __name__ == '__main__':
     max_frames = 81
     use_teacache = False
     cfg_value = 1.5
-    caption = "human in a scene"
 
     ckpt_path = args.ckpt_path
     wan_base_ckpt_path = args.wan_base_ckpt_path
     character_image_path = args.character_image_path
-    scene_path = args.scene_path
     save_root = args.save_root
     
-    bkgd_video_path = os.path.join(scene_path, 'bkgd_video.mp4')
-    smplx_path = os.path.join(scene_path, 'smplx_params')
-    smplx_mesh_path = os.path.join(scene_path, 'smplx_video.mp4')
+    bkgd_video_path = scene_path.replace('raw_video', 'propainter_video')
+    smplx_path = os.path.join(os.path.splitext(scene_path.replace('raw_video', 'smplx_param'))[0], 'smplx_params')
+    smplx_mesh_path = scene_path.replace('raw_video', 'smplx_video')
 
     save_gaussian_path = character_image_path.replace('.jpg', '_gaussian.pth')
     save_video_path = os.path.join(save_root, f'{os.path.basename(scene_path)}/{os.path.basename(character_image_path).split(".")[0]}.mp4')
@@ -390,9 +443,9 @@ if __name__ == '__main__':
 
     dxdydz, xyz, rgb, opacity, scaling, rotation, transform_mat_neutral_pose, esti_shape, body_ratio, have_face = gaussians_list
 
-    bkgd_pils_origin = video_to_pil_images(bkgd_video_path, H, W)
-    smplx_mesh_pils_origin = video_to_pil_images(smplx_mesh_path, H, W)
-    smplx_json_paths = sorted(os.path.join(smplx_path, x) for x in os.listdir(smplx_path))
+    bkgd_pils_origin = video_to_pil_images(bkgd_video_path, H, W, max_frames=max_frames)
+    smplx_mesh_pils_origin = video_to_pil_images(smplx_mesh_path, H, W, max_frames=max_frames)
+    smplx_json_paths = sorted(os.path.join(smplx_path, x) for x in os.listdir(smplx_path))[:max_frames]
 
     smplx_mesh_tensors = [torch.from_numpy(np.array(smplx_mesh_pil)) / 255. for smplx_mesh_pil in smplx_mesh_pils_origin]
 
@@ -406,7 +459,7 @@ if __name__ == '__main__':
 
     blend_pils_origin = []
 
-    for bkgd_pil, smplx_json_path in tqdm(zip(bkgd_pils_origin, smplx_json_paths), desc="Rendering Avatar", total=len(smplx_json_paths)):
+    for bkgd_pil, smplx_json_path in tqdm(zip(bkgd_pils_origin, smplx_json_paths), desc="Rendering Avatar", total=len(bkgd_pils_origin)):
 
         batch = {
             key: to_cuda_and_squeeze(value) 
@@ -502,7 +555,7 @@ if __name__ == '__main__':
 
     # Image-to-video
     video = pipe(
-        prompt=caption,
+        prompt="human in a scene",
         negative_prompt="细节模糊不清，字幕，作品，画作，画面，静止，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，杂乱的背景，三条腿，背景人很多，倒着走",
         input_image=ref_frame,
         ref_combine_blend_tensor=ref_combine_blend_tensor, 
@@ -517,5 +570,5 @@ if __name__ == '__main__':
         tea_cache_model_id="Wan2.1-I2V-14B-720P" if use_teacache else None,
     )
 
-
-    save_video(ref_frame_pils_origin, [smplx_mesh_pils_origin[0]] + smplx_mesh_pils_origin[:-1], [blend_pils_origin[0]] + blend_pils_origin[:-1], video, save_video_path, fps=15)
+    if dist.get_rank() == 0:
+        save_video(ref_frame_pils_origin, [smplx_mesh_pils_origin[0]] + smplx_mesh_pils_origin[:-1], [blend_pils_origin[0]] + blend_pils_origin[:-1], video, save_video_path, fps=15)

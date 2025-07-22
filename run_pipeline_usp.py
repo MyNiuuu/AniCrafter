@@ -8,6 +8,7 @@ import json
 import math
 import cv2
 import argparse
+import torch.distributed as dist
 
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from pytorch3d.transforms import matrix_to_quaternion
@@ -327,8 +328,12 @@ def prepare_models(wan_base_ckpt_path, lora_ckpt_path):
 
     # assert False
 
+    # pipe = WanAniCrafterCombineVideoPipeline.from_model_manager(
+    #     model_manager, torch_dtype=torch.bfloat16, device="cuda"
+    # )
     pipe = WanAniCrafterCombineVideoPipeline.from_model_manager(
-        model_manager, torch_dtype=torch.bfloat16, device="cuda"
+        model_manager, torch_dtype=torch.bfloat16, device=f"cuda:{dist.get_rank()}", 
+        use_usp=True if dist.get_world_size() > 1 else False
     )
     pipe.enable_vram_management()
 
@@ -377,6 +382,22 @@ if __name__ == '__main__':
     
     os.makedirs(os.path.dirname(save_video_path), exist_ok=True)
     os.makedirs(os.path.dirname(save_gaussian_path), exist_ok=True)
+
+    dist.init_process_group(
+        backend="nccl",
+        init_method="env://",
+    )
+    from xfuser.core.distributed import (initialize_model_parallel,
+                                        init_distributed_environment)
+    init_distributed_environment(
+        rank=dist.get_rank(), world_size=dist.get_world_size())
+
+    initialize_model_parallel(
+        sequence_parallel_degree=dist.get_world_size(),
+        ring_degree=1,
+        ulysses_degree=dist.get_world_size(),
+    )
+    torch.cuda.set_device(dist.get_rank())
 
     lhm_runner, SMPLX_MODEL, pipe, frame_process_norm = prepare_models(
         wan_base_ckpt_path, ckpt_path
@@ -517,5 +538,5 @@ if __name__ == '__main__':
         tea_cache_model_id="Wan2.1-I2V-14B-720P" if use_teacache else None,
     )
 
-
-    save_video(ref_frame_pils_origin, [smplx_mesh_pils_origin[0]] + smplx_mesh_pils_origin[:-1], [blend_pils_origin[0]] + blend_pils_origin[:-1], video, save_video_path, fps=15)
+    if dist.get_rank() == 0:
+        save_video(ref_frame_pils_origin, [smplx_mesh_pils_origin[0]] + smplx_mesh_pils_origin[:-1], [blend_pils_origin[0]] + blend_pils_origin[:-1], video, save_video_path, fps=15)

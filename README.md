@@ -102,6 +102,7 @@
 
 ## 📰 CODE RELEASE
 
+- [x] (2024.07.22) We support Unified Sequence Parallel (USP) for multi-GPU inference.
 - [x] (2024.07.01) Release model checkpoint and cross-character inference script.
 - [x] (2024.07.03) Release the complete cross-character inference script including data preprocessing (mask parsing + SMPLX estimation + background inpainting).
 - [ ] Release training codes.
@@ -115,6 +116,8 @@
 conda create -n anicrafter python=3.10
 conda activate anicrafter
 bash install_cu124.sh
+
+pip install xfuser  # Unified Sequence Parallel (USP) for multi-GPU inference 
 ```
 
 
@@ -136,6 +139,8 @@ Run the following commands to insert and animate the character into the backgrou
 - Combine avatar rendering and background video to form the "Avatar + Background" condition
 - Run the diffusion model to obtain the final animation results 
 
+### Single GPU Inference
+
 ```
 python run_pipeline.py \
 --ckpt_path ./pretrained_models/anicrafter \
@@ -145,7 +150,19 @@ python run_pipeline.py \
 --save_root ./infer_result
 ```
 
+### Multi-GPU Inference with Unified Sequence Parallel (USP) for acceleration
 
+```
+torchrun \
+--nproc_per_node=8 \
+--master_port=16333 \
+run_pipeline_usp.py \
+--ckpt_path ./pretrained_models/anicrafter \
+--wan_base_ckpt_path ./Wan2.1-I2V-14B-720P \
+--character_image_path ./demo/character_images/000000.jpg \
+--scene_path ./demo/videos/scene_000000 \
+--save_root ./infer_result
+```
 
 ## 🏃 Cross-Character Inference from in-the-wild Videos 
 Run the following commands to replace the person in the source video with our complete data preprocessing pipeline, which contains the following components:
@@ -184,7 +201,7 @@ cd ..
 # or you can mannually download from https://github.com/sczhou/ProPainter/releases/tag/v0.1.0
 ```
 
-### 💻 Start Inference
+### Single GPU Inference
 
 ```
 # Mask + SMPLX + Inpainting + Avatar Recon + Rendering + Diffusion
@@ -198,6 +215,22 @@ python run_pipeline_with_preprocess.py \
 --save_root ./infer_result_replace
 ```
 
+### Multi-GPU Inference with Unified Sequence Parallel (USP) for acceleration
+
+```
+# Mask + SMPLX + Inpainting + Avatar Recon + Rendering + Diffusion
+# You could change the hyper-parameters of the inpainting algorithm to obtain optimal results
+
+torchrun \
+--nproc_per_node=8 \
+--master_port=16333 \
+run_pipeline_with_preprocess_usp.py \
+--video_root ./demo/origin_videos/raw_video \
+--ckpt_path ./pretrained_models/anicrafter \
+--wan_base_ckpt_path ./Wan2.1-I2V-14B-720P \
+--character_image_path ./demo/character_images/000000.jpg \
+--save_root ./infer_result_replace
+```
 
 ## Citation
 ```
