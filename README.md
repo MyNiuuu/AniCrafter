@@ -93,6 +93,7 @@
 
 ## 🔥🔥🔥 New Features/Updates
 
+- (2026.07.14) AniCrafter is accepted to ACM MM 2026! 🎉 We will release the new version of our model in the following days!
 - (2025.07.22) We support Unified Sequence Parallel (USP) for multi-GPU inference.
 - (2025.07.03) We have released the cross-character inference script to replace the person in the source video!
 - (2025.07.02) Our [Project Page](https://myniuuu.github.io/AniCrafter) 🏠 is online!
