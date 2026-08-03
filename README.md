@@ -26,12 +26,6 @@
 > 🚧 $\color{red}{\textsf{Note: The code in this repository corresponds to the arXiv v1 version of the paper (not the accepted ACM MM version).}}$
 > $\color{red}{\textsf{The homepage and arXiv paper has been updated, yet the code for our new version are still under preparation. Stay tuned!}}$
 
-<div align="center">
-  <h3>
-    <img src="assets/caixukun_1080p.gif"/>
-  </h3>
-</div>
-
 
 
 ## TL;DR
@@ -40,7 +34,7 @@
 
 <div align="center">
   <h3>
-    <img src="assets/teaser_small.jpg"/>
+    <img src="assets/teaser.jpeg"/>
   </h3>
 </div>
 
