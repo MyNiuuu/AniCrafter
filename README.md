@@ -6,8 +6,7 @@
     <a href='https://github.com/ljzycmd' target='_blank'>Mingdeng Cao</a><sup>1</sup> &nbsp;
     <a href='https://yifever20002.github.io/' target='_blank'>Yifan Zhan</a><sup>1</sup> &nbsp;
     <a href='https://qtzhu.me/' target='_blank'>Qingtian Zhu</a><sup>1</sup> &nbsp; 
-    <a href='https://github.com/mm2319' target='_blank'>Mingze Ma</a><sup>1</sup> &nbsp;
-    <a href='https://github.com/zhaojiancheng007' target='_blank'>Jiancheng Zhao</a><sup>1</sup> &nbsp; 
+    <a href='https://silverran.github.io/' target='_blank'>Weihang Ran</a><sup>1</sup> &nbsp; 
 <div>
 <div>
     <a href='https://zengyh1900.github.io/' target='_blank'>Yanhong Zeng</a><sup>2</sup> &nbsp; 
